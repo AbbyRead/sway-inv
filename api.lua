@@ -1,13 +1,60 @@
+---@meta sway
+
+---@class PageDef
+---@field name string
+---@field title string
+---@field get fun(self: PageDef, player: any, context: SwayContext): any
+---@field is_in_nav? fun(self: PageDef, player: any, context: SwayContext): boolean
+---@field on_leave? fun(self: PageDef, player: any, context: SwayContext)
+---@field on_enter? fun(self: PageDef, player: any, context: SwayContext)
+---@field CraftingRow? fun(self: PageDef, ...): any
+---@field [string] any
+
+---@class SwayContext
+---@field page string
+---@field player_name string
+---@field nav? string[]
+---@field nav_titles? string[]
+---@field nav_idx? integer
+---@field [string] any
+
+---@class SwayAPI
+---@field pages table<string, PageDef>
+---@field pages_ordered PageDef[]
+---@field enabled boolean
+---@field list_spacing number
+---@field form any
+---@field register_page fun(name: string, def: PageDef)
+---@field override_page fun(name: string, def: table)
+---@field NavGui fun(fields: { nav_titles: string[], current_idx: integer }): any
+---@field InventoryTiles fun(fields?: { w?: integer, h?: integer }): any
+---@field insert_prepend fun(widget: table)
+---@field Form fun(fields: { [string]: any, show_inv?: boolean }): any
+---@field get_homepage_name fun(player: any): string
+---@field get_form fun(player: any, context: SwayContext): any
+---@field get_or_create_context fun(player?: any): SwayContext
+---@field get_player_and_context fun(player?: any, context?: SwayContext): any, SwayContext
+---@field set_context fun(player: any, context?: SwayContext)
+---@field set_player_inventory_formspec fun(player?: any, context?: SwayContext)
+---@field set_page fun(player: any, new_page_name: string)
+---@field get_page fun(player: any): string
+
+-- Create a global namespace "sway" and add fields for pages, pages_ordered, and a status "enabled" boolean.
+---@type SwayAPI
+---@diagnostic disable-next-line: missing-fields
 _G.sway = {
-	pages = {},
-	pages_ordered = {},
-	enabled = true,
+	pages = {}, -- Flow windows.
+	pages_ordered = {}, -- Same as pages but can use ipairs I guess, or for placement?
+	enabled = true, -- This way you can test for sway.enabled
 }
-local contexts = {}
-local gui = flow.widgets
+local contexts = {} -- State data maybe?
+local gui = flow.widgets -- Flow elements.
 
 -- TODO: use fake tabheader
+-- 		 ^ What's this talking about? What's the point?
 
+---@param name string
+---@param def PageDef
 function sway.register_page(name, def)
 	assert(type(name) == "string", "[sway] register_page: requires name to be string")
 	assert(type(def) == "table", "[sway] register_page: requires definition table to be table")
@@ -23,6 +70,8 @@ function sway.register_page(name, def)
 	table.insert(sway.pages_ordered, def)
 end
 
+---@param name string
+---@param def table
 function sway.override_page(name, def)
 	assert(type(name) == "string", "[sway] override_page: requires name to be a string")
 	assert(type(def) == "table", "[sway] override_page: requires definition table to be a table")
@@ -49,6 +98,8 @@ function sway.override_page(name, def)
 	end
 end
 
+---@param fields { nav_titles: string[], current_idx: integer }
+---@return any
 function sway.NavGui(fields)
 	assert(type(fields) == "table", "[sway] NavGui: requires field table.")
 	local nav_titles = fields.nav_titles
@@ -76,6 +127,9 @@ function sway.NavGui(fields)
 end
 
 sway.list_spacing = 0.25
+
+---@param fields? { w?: integer, h?: integer }
+---@return any
 function sway.InventoryTiles(fields)
 	if fields == nil then
 		fields = {}
@@ -105,11 +159,16 @@ function sway.InventoryTiles(fields)
 		} or gui.Nil{}
 	}
 end
+
+---@param widget table
 function sway.insert_prepend(widget)
 	widget.no_prepend = true -- Hide the default background.
 	widget.bgcolor = "#0000"
 	table.insert(widget, 1, gui.StyleType{ selectors = { "list" }, props = { spacing = sway.list_spacing } })
 end
+
+---@param fields table
+---@return any
 function sway.Form(fields)
 	assert(type(fields) == "table", "[sway] Form: requires field table.")
 	local show_inv = fields.show_inv
@@ -136,6 +195,8 @@ function sway.Form(fields)
 	}
 end
 
+---@param _ ObjectRef
+---@return string
 function sway.get_homepage_name(_)
 	return "sway:crafting"
 end
@@ -151,6 +212,9 @@ sway.form = flow.make_gui(function (player, ctx)
 	return form
 end)
 
+---@param player any
+---@param context SwayContext
+---@return any
 function sway.get_form(player, context)
 	player, context = sway.get_player_and_context(player, context)
 	-- Generate navigation tabs
@@ -208,6 +272,8 @@ function sway.get_form(player, context)
 	end
 end
 
+---@param player any
+---@param ctx SwayContext
 local function ensure_valid_context(player, ctx)
 	if not ctx.page then
 		ctx.page = sway.get_homepage_name(player)
@@ -217,6 +283,8 @@ local function ensure_valid_context(player, ctx)
 	end
 end
 
+---@param player? any
+---@return SwayContext
 function sway.get_or_create_context(player)
 	local context = flow_extras.get_context()
 	if context then return context end
@@ -233,6 +301,9 @@ function sway.get_or_create_context(player)
 	return context
 end
 
+---@param player? any
+---@param context? SwayContext
+---@return any, SwayContext
 function sway.get_player_and_context(player, context)
 	if not context then
 		context = sway.get_or_create_context(player)
@@ -243,6 +314,8 @@ function sway.get_player_and_context(player, context)
 	return player, context
 end
 
+---@param player any
+---@param context? SwayContext
 function sway.set_context(player, context)
 	assert(player and player.get_player_name, "[sway] set_context: Requires a playerref")
 	local name = player:get_player_name()
@@ -254,10 +327,14 @@ function sway.set_context(player, context)
 	contexts[name] = context
 end
 
+---@param player? any
+---@param context? SwayContext
 function sway.set_player_inventory_formspec(player, context)
 	sway.form:set_as_inventory_for(sway.get_player_and_context(player, context))
 end
 
+---@param player any
+---@param new_page_name string
 function sway.set_page(player, new_page_name)
 	local context = sway.get_or_create_context(player)
 	local old_page = sway.pages[context.page]
@@ -279,6 +356,8 @@ function sway.set_page(player, new_page_name)
 	sway.set_player_inventory_formspec(player, context)
 end
 
+---@param player any
+---@return string
 function sway.get_page(player)
 	-- We don't need to do any checks here because
 	-- 1. The context is guaranteed
