@@ -1,7 +1,7 @@
 ---@meta sway
 
 ---@class PageDef
----@field name string
+---@field name string|nil
 ---@field title string
 ---@field get fun(self: PageDef, player: any, context: SwayContext): any
 ---@field is_in_nav? fun(self: PageDef, player: any, context: SwayContext): boolean
