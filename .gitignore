@@ -1,2 +1,4 @@
 *.out
 luacov_html/
+.DS_Store
+third_party/

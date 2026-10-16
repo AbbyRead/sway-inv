@@ -1,0 +1,16 @@
+{
+    "runtime.version": "LuaJIT",
+    "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+    "completion.autoRequire": false,
+    "diagnostics.globals": [
+      "core",
+      "minetest",
+      "ItemStack",
+      "ObjectRef"
+    ],
+    "diagnostics.disable": [
+      "lowercase-global"
+    ],
+    "workspace.checkThirdParty": "Apply",
+    "workspace.library": ["third_party/luanti_lsp_definitions/library"]
+}
