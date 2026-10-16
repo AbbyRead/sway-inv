@@ -1,5 +1,15 @@
 ---@meta sway
 
+---@class FlowElement
+---@field [string] any
+
+---@class FlowForm
+---@field show fun(self: FlowForm, player: any, context?: table)
+---@field close fun(self: FlowForm, player: any)
+---@field update_where fun(self: FlowForm, func: fun(player: any, context: table): boolean)
+---@field set_as_inventory_for fun(self: FlowForm, player: any, context?: table)
+---@field [string] any
+
 ---@class PageDef
 ---@field name string|nil
 ---@field title string
@@ -13,10 +23,16 @@
 ---@class SwayContext
 ---@field page string
 ---@field player_name string
+---@field player? ObjectRef
 ---@field nav? string[]
 ---@field nav_titles? string[]
 ---@field nav_idx? integer
 ---@field [string] any
+
+---@class SwayFormFields
+---@field show_inv? boolean Whether to show the player's main inventory
+---@field size? table @deprecated Optional. Sets the size of the formspec. Defaults to `{ w = 8, h = 8.6 }`.
+---@field [string] any Flow elements / child widgets
 
 ---@class SwayAPI
 ---@field pages table<string, PageDef>
@@ -27,9 +43,9 @@
 ---@field register_page fun(name: string, def: PageDef)
 ---@field override_page fun(name: string, def: table)
 ---@field NavGui fun(fields: { nav_titles: string[], current_idx: integer }): any
----@field InventoryTiles fun(fields?: { w?: integer, h?: integer }): any
+---@field InventoryTiles fun(fields?: { w?: number, h?: number }): any
 ---@field insert_prepend fun(widget: table)
----@field Form fun(fields: { [string]: any, show_inv?: boolean }): any
+---@field Form fun(fields: SwayFormFields): FlowForm
 ---@field get_homepage_name fun(player: any): string
 ---@field get_form fun(player: any, context: SwayContext): any
 ---@field get_or_create_context fun(player?: any): SwayContext
@@ -128,7 +144,7 @@ end
 
 sway.list_spacing = 0.25
 
----@param fields? { w?: integer, h?: integer }
+---@param fields? { w?: number, h?: number }
 ---@return any
 function sway.InventoryTiles(fields)
 	if fields == nil then
@@ -238,9 +254,11 @@ function sway.get_form(player, context)
 	-- Generate formspec
 	local page = sway.pages[requested_page]
 	if not page then
+		-- Fall back to 404 Not Found if the requested page does not exist at all[cite: 1]
 		page = sway.pages["404"]
 		context.page = "404"
 	elseif current_idx == -1 then
+		-- Fall back to 403 Forbidden if the page exists but is excluded from navigation/access[cite: 1]
 		page = sway.pages["403"]
 		context.page = "403"
 	end
@@ -280,6 +298,9 @@ local function ensure_valid_context(player, ctx)
 	end
 	if not ctx.player_name then
 		ctx.player_name = player:get_player_name()
+	end
+	if not ctx.player then
+		ctx.player = player
 	end
 end
 
